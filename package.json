@@ -1,0 +1,30 @@
+{
+  "name": "wgc",
+  "version": "1.0.0",
+  "description": "WGC - Web Game Controller",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EvsChen/WGC.git"
+  },
+  "author": "EvsChen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/EvsChen/WGC/issues"
+  },
+  "homepage": "https://github.com/EvsChen/WGC#readme",
+  "dependencies": {
+    "express": "^4.16.3",
+    "html-webpack-plugin": "^3.2.0",
+    "socket.io": "^2.1.0",
+    "socket.io-client": "^2.1.0",
+    "webpack": "^4.6.0",
+    "webpack-cli": "^2.1.2",
+    "webpack-dev-middleware": "^3.1.3",
+    "webpack-hot-middleware": "^2.22.1"
+  }
+}
