@@ -2,6 +2,8 @@
  * @file: index.js
  * @author: EvsChen
  **/
+import './style.less';
+import anime from 'animejs';
 
 const socket = io();
 const GAME_CONNECT = 'game_connect';
@@ -12,11 +14,14 @@ qr.id = 'qr';
 document.body.appendChild(qr);
 if (window.location.href.indexOf('?id=') > 0) {
     console.log(`Hey, you're a controller trying to connect to: ${window.location.href.split('?id=')[1]}`);
+    document.getElementById('controller').classList.add('show');
     socket.emit('controller_connect', window.location.href.split('?id=')[1]);
     const controllerState = {
         accelerate: false,
-        steer: 0
+        steer: 0,
+        direction: 0
     };
+    const MODE = 'direction';
     const emitUpdates = () => {
         socket.emit(CONTROLLER_STATE_CHANGE, controllerState);
     };
@@ -35,14 +40,29 @@ if (window.location.href.indexOf('?id=') > 0) {
         controllerState.steer = e.accelerationIncludingGravity.y / 100;
         emitUpdates();
     };
-    document.body.addEventListener('touchstart', touchstart, false); // iOS & Android
-    document.body.addEventListener('MSPointerDown', touchstart, false); // Windows Phone
-    document.body.addEventListener('touchend', touchend, false); // iOS & Android
-    document.body.addEventListener('MSPointerUp', touchend, false); // Windows Phone
-    window.addEventListener('devicemotion', devicemotion, false);
+    if (MODE === 'touch') {
+        window.addEventListener('touchstart', touchstart, false); // iOS & Android
+        window.addEventListener('MSPointerDown', touchstart, false); // Windows Phone
+        window.addEventListener('touchend', touchend, false); // iOS & Android
+        window.addEventListener('MSPointerUp', touchend, false); // Windows Phone
+        window.addEventListener('devicemotion', devicemotion, false);
+        window.addEventListener('mousedown', touchstart, false);
+        window.addEventListener('mouseup', touchend, false);
+    } else if (MODE === 'direction') {
+        const leftAction = () => {
+            console.log('Left button clicked');
+            controllerState.direction -= 5;
+            emitUpdates();
+        };
+        const rightAction = () => {
+            console.log('Right button clicked');
+            controllerState.direction += 5;
+            emitUpdates();
+        };
+        document.getElementById('left').onclick = leftAction;
+        document.getElementById('right').onclick = rightAction;
+    }
 
-    window.addEventListener('mousedown', touchstart, false);
-    window.addEventListener('mouseup', touchend, false);
 }
 else {
     class Car {
@@ -52,6 +72,7 @@ else {
             this.accelerate = false;
             this.speed = 0;
             this.steer = 0;
+            this.direction = 0;
             const carDiv = document.createElement('div');
             carDiv.id = 'carId';
             carDiv.style.width = '100px';
@@ -67,8 +88,9 @@ else {
         }
 
         setState(state) {
-            this.accelerate = state.accelerate;
-            this.steer = state.steer;
+            this.accelerate = state.accelerate || 0;
+            this.steer = state.steer || 0;
+            this.direction = state.direction || 0;
             this.refreshState();
         }
 
@@ -85,6 +107,18 @@ else {
             }
             this.x += this.speed;
             this.setPositon();
+            this.setAngle();
+        }
+
+        setAngle() {
+            anime({
+                targets: this.elem,
+                rotate: {
+                    value: this.direction
+                },
+                duration: 500,
+                loop: false
+            });
         }
 
         setPositon() {
@@ -100,7 +134,8 @@ else {
     socket.emit('game_connect');
     const gameConnectedListener = () => {
         // const url = `http://172.20.10.10:3000?id=${socket.id}`;
-        const url = `http://localhost:3000?id=${socket.id}`;
+        // const url = `http://localhost:3000?id=${socket.id}`;
+        const url = `http://192.168.31.22:3000?id=${socket.id}`;
         document.body.innerHTML += url;
         const qrCode = new QRCode('qr');
         qrCode.makeCode(url);
