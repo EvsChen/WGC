@@ -3,6 +3,11 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
+    watchOptions: {
+        ignored: /node_moduels/,
+        poll: 10000
+    },
+    mode: 'development',
     entry: {
         app: './src/index.js'
     },

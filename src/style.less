@@ -1,7 +1,34 @@
+body {
+    padding: 0 20px;
+}
+
+.show {
+    display: block !important;
+}
+
+.hide {
+    display: none !important;    
+}
+
 .controller {
     display: none;
 }
 
-.show {
-    display: block;
+#main {
+    padding-top: 100px;
+    .intro {
+        width: 480px;
+        float: left;
+        padding: 10px;
+        border-right: 2px dashed #606060;
+    }
+    .game {
+        overflow: hidden;
+        padding-left: 20px;
+        .game-list {
+            li {
+                cursor: pointer;
+            }
+        }
+    }  
 }

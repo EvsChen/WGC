@@ -11,6 +11,9 @@ const http = require('http');
 const express = require('express');
 const app = express();
 app.use('/', express.static('app'));
+app.use('/lib', express.static('lib'));
+app.use('/assets', express.static('assets'));
+
 const server = new http.Server(app);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT);

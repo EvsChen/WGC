@@ -4,18 +4,94 @@
  **/
 import './style.less';
 import anime from 'animejs';
+import * as sketch from './sketch';
+import Car from './Car';
+import $ from 'jquery';
 
 const socket = io();
 const GAME_CONNECT = 'game_connect';
 const GAME_CONNECTED = 'game_connected';
+const CONTROLLER_CONNECT = 'controller_connect';
+const CONTROLLER_CONNECTED = 'controller_connected';
+const CONTROLLER_DISCONNECTED = 'controller_disconnected';
 const CONTROLLER_STATE_CHANGE = 'controller_state_change';
-const qr = document.createElement('div');
-qr.id = 'qr';
-document.body.appendChild(qr);
+
 if (window.location.href.indexOf('?id=') > 0) {
-    console.log(`Hey, you're a controller trying to connect to: ${window.location.href.split('?id=')[1]}`);
+    initController();
+} else {
+    initGame();
+}
+
+function initController() {
+    document.getElementById('main').classList.add('hide');
+    initControllerSocket(window.location.href.split('?id=')[1]);
+}
+
+function initGame() {
+    const gameList = document.getElementsByClassName('game-list')[0];
+    const gameBlock = document.getElementById('GameBlock');
+    gameList.addEventListener('click', e => {
+        let target = e.target;
+        let curTarget = e.currentTarget;
+        while (target !== curTarget) {
+            console.log(target);
+            if (target.nodeName.toLowerCase() === 'li') {
+                gameList.style.display = 'none';
+                initGameSocket(target.id);
+                break;
+            }
+            target = target.parentNode;
+        }
+    });
+}
+
+function initGameSocket(gameId) {
+    socket.emit(GAME_CONNECT);
+    socket.on(GAME_CONNECTED, gameConnectedListener);
+    socket.on(CONTROLLER_CONNECTED, controllerConnectedListener);
+    function gameConnectedListener() {
+        // const url = `http://172.20.10.10:3000?id=${socket.id}`;
+        // const url = `http://localhost:3000?id=${socket.id}`;
+        const url = `http://192.168.31.22:3000?id=${socket.id}`;
+        const urlLink = document.createElement('a');
+        urlLink.id = 'url';
+        urlLink.href = url;
+        urlLink.text = 'Click here to open the controller';
+        urlLink.target = '_blank';
+        document.body.appendChild(urlLink);
+        const qr = document.createElement('div');
+        qr.id = 'qr';
+        document.body.appendChild(qr);
+        const qrCode = new QRCode('qr');
+        qrCode.makeCode(url);
+        socket.removeListener(GAME_CONNECTED, gameConnectedListener);
+    };
+    function controllerConnectedListener(isConnected) {
+        if (isConnected) {
+            console.log('Controller connected successfully');
+            $('#qr').remove();
+            $('#url').remove();
+            showGame(gameId);
+            socket.on(CONTROLLER_STATE_CHANGE, state => {
+            });
+            socket.on(CONTROLLER_DISCONNECTED, () => {
+            });
+        }
+        else {
+            console.log('Controller failed to connect');
+            document.getElementById('qr').style.display = 'block';
+        }
+    };
+}
+
+function showGame(gameId) {
+    sketch.init('GameBlock');
+}
+
+function initControllerSocket(socketId) {
+    console.log(`Hey, you're a controller trying to connect to: ${socketId}`);
     document.getElementById('controller').classList.add('show');
-    socket.emit('controller_connect', window.location.href.split('?id=')[1]);
+    socket.emit(CONTROLLER_CONNECT, socketId);
     const controllerState = {
         accelerate: false,
         steer: 0,
@@ -62,104 +138,4 @@ if (window.location.href.indexOf('?id=') > 0) {
         document.getElementById('left').onclick = leftAction;
         document.getElementById('right').onclick = rightAction;
     }
-
-}
-else {
-    class Car {
-        constructor(x, y) {
-            this.x = x;
-            this.y = y;
-            this.accelerate = false;
-            this.speed = 0;
-            this.steer = 0;
-            this.direction = 0;
-            const carDiv = document.createElement('div');
-            carDiv.id = 'carId';
-            carDiv.style.width = '100px';
-            carDiv.style.height = '100px';
-            carDiv.style.position = 'absolute';
-            carDiv.style.left = `${x}px`;
-            carDiv.style.top = `${y}px`;
-            carDiv.style.backgroundColor = 'red';
-            document.body.appendChild(carDiv);
-            this.elem = document.getElementById('carId');
-            // Key of the refresh
-            this.refreshInterval = window.setInterval(this.refreshState.bind(this), 100);
-        }
-
-        setState(state) {
-            this.accelerate = state.accelerate || 0;
-            this.steer = state.steer || 0;
-            this.direction = state.direction || 0;
-            this.refreshState();
-        }
-
-        refreshState() {
-            if (this.accelerate) {
-                if (this.speed < 20) {
-                    this.speed += 3;
-                }
-            }
-            else {
-                if (this.speed > 0) {
-                    this.speed -= 3;
-                }
-            }
-            this.x += this.speed;
-            this.setPositon();
-            this.setAngle();
-        }
-
-        setAngle() {
-            anime({
-                targets: this.elem,
-                rotate: {
-                    value: this.direction
-                },
-                duration: 500,
-                loop: false
-            });
-        }
-
-        setPositon() {
-            this.elem.style.left = `${this.x}px`;
-            this.elem.style.top = `${this.y}px`;
-        }
-
-        destroy() {
-            document.body.removeChild(this.elem);
-            window.clearInterval(this.refreshInterval);
-        }
-    }
-    socket.emit('game_connect');
-    const gameConnectedListener = () => {
-        // const url = `http://172.20.10.10:3000?id=${socket.id}`;
-        // const url = `http://localhost:3000?id=${socket.id}`;
-        const url = `http://192.168.31.22:3000?id=${socket.id}`;
-        document.body.innerHTML += url;
-        const qrCode = new QRCode('qr');
-        qrCode.makeCode(url);
-        socket.removeListener('game_connected', gameConnectedListener);
-    };
-    const controllerConnectedListener = isConnected => {
-        if (isConnected) {
-            console.log('Controller connected successfully');
-            document.getElementById('qr').style.display = 'none';
-            let speed = 0;
-            let controllerState = {};
-            const car = new Car(100, 100);
-            socket.on(CONTROLLER_STATE_CHANGE, state => {
-                car.setState(state);
-            });
-            socket.on('controller_disconnected', () => {
-                car.destroy();
-            });
-        }
-        else {
-            console.log('Controller failed to connect');
-            document.getElementById('qr').style.display = 'block';
-        }
-    };
-    socket.on('game_connected', gameConnectedListener);
-    socket.on('controller_connected', controllerConnectedListener);
 }
