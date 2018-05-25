@@ -4,9 +4,10 @@
  **/
 import './style.less';
 import anime from 'animejs';
-import * as sketch from './sketch';
+import CubeGame from './CubeGame';
 import Car from './Car';
 import $ from 'jquery';
+import _ from 'lodash';
 
 const socket = io();
 const GAME_CONNECT = 'game_connect';
@@ -15,6 +16,36 @@ const CONTROLLER_CONNECT = 'controller_connect';
 const CONTROLLER_CONNECTED = 'controller_connected';
 const CONTROLLER_DISCONNECTED = 'controller_disconnected';
 const CONTROLLER_STATE_CHANGE = 'controller_state_change';
+
+class Controller {
+    /**
+     * @param {Object} socketConfig 
+     * @param {Object} socketConfig.socket - socket for the controller
+     * @param {string} socketConfig.gameSocketId - the id for the game socket
+     * @param {Object} state - the initial state of the controller
+     */
+    constructor(socketConfig, state) {
+        this.socket = socketConfig.socket;
+        this.gameSocketId = socketConfig.gameSocketId;
+        this.socket.emit(CONTROLLER_CONNECT, this.gameSocketId);
+        this.controllerState = state;
+    }
+    /**
+     * @param {Object} newState 
+     */
+    setState(newState) {
+        Object.assign(this.controllerState, newState);
+        this.emitUpdates();
+    }
+
+    emitUpdates() {
+        this.socket.emit(CONTROLLER_STATE_CHANGE, this.controllerState);
+    }
+
+    disconnect() {
+        this.socket.emit(CONTROLLER_DISCONNECTED, this.gameSocketId);
+    }
+}
 
 if (window.location.href.indexOf('?id=') > 0) {
     initController();
@@ -50,9 +81,9 @@ function initGameSocket(gameId) {
     socket.on(GAME_CONNECTED, gameConnectedListener);
     socket.on(CONTROLLER_CONNECTED, controllerConnectedListener);
     function gameConnectedListener() {
-        // const url = `http://172.20.10.10:3000?id=${socket.id}`;
+        const url = `http://172.18.27.18:3000?id=${socket.id}`;
         // const url = `http://localhost:3000?id=${socket.id}`;
-        const url = `http://192.168.31.22:3000?id=${socket.id}`;
+        // const url = `http://192.168.31.22:3000?id=${socket.id}`;
         const urlLink = document.createElement('a');
         urlLink.id = 'url';
         urlLink.href = url;
@@ -71,8 +102,9 @@ function initGameSocket(gameId) {
             console.log('Controller connected successfully');
             $('#qr').remove();
             $('#url').remove();
-            showGame(gameId);
+            const game = showGame(gameId);
             socket.on(CONTROLLER_STATE_CHANGE, state => {
+                game.setCube(state);
             });
             socket.on(CONTROLLER_DISCONNECTED, () => {
             });
@@ -85,57 +117,67 @@ function initGameSocket(gameId) {
 }
 
 function showGame(gameId) {
-    sketch.init('GameBlock');
+    const cubeGame = new CubeGame('GameBlock');
+    return cubeGame;
 }
 
 function initControllerSocket(socketId) {
     console.log(`Hey, you're a controller trying to connect to: ${socketId}`);
     document.getElementById('controller').classList.add('show');
-    socket.emit(CONTROLLER_CONNECT, socketId);
-    const controllerState = {
-        accelerate: false,
-        steer: 0,
-        direction: 0
-    };
-    const MODE = 'direction';
-    const emitUpdates = () => {
-        socket.emit(CONTROLLER_STATE_CHANGE, controllerState);
-    };
-    const touchstart = e => {
-        e.preventDefault();
-        console.log('mouse down');
-        controllerState.accelerate = true;
-        emitUpdates();
-    };
-    const touchend = e => {
-        e.preventDefault();
-        controllerState.accelerate = false;
-        emitUpdates();
-    };
-    const devicemotion = e => {
-        controllerState.steer = e.accelerationIncludingGravity.y / 100;
-        emitUpdates();
-    };
+    const MODE = 'touch';
     if (MODE === 'touch') {
-        window.addEventListener('touchstart', touchstart, false); // iOS & Android
-        window.addEventListener('MSPointerDown', touchstart, false); // Windows Phone
-        window.addEventListener('touchend', touchend, false); // iOS & Android
-        window.addEventListener('MSPointerUp', touchend, false); // Windows Phone
-        window.addEventListener('devicemotion', devicemotion, false);
-        window.addEventListener('mousedown', touchstart, false);
-        window.addEventListener('mouseup', touchend, false);
+        const initState = {
+            plusX: 0,
+            plusY: 0
+        };
+        const touchController = new Controller({
+            socket,
+            gameSocketId: socketId
+        }, initState);
+        const recordPosition = {
+            x: 0, 
+            y: 0
+        };
+        function mousedownListener(e) {
+            recordPosition.x = e.clientX;
+            recordPosition.y = e.clientY;
+            window.addEventListener('mousemove', mousemoveListener)
+        }
+        function mouseupListener(e) {
+            recordPosition.x = 0;
+            recordPosition.y = 0;
+            window.removeEventListener('mousemove', mousemoveListener);
+        }
+        function mousemoveListener (e) {
+            const plusX = e.clientX - recordPosition.x;
+            const plusY = e.clientY - recordPosition.y;
+            touchController.setState({
+                plusX: plusX / 100,
+                plusY: - plusY / 100
+            });
+        }
+        window.addEventListener('mousedown', mousedownListener);
+        window.addEventListener('mouseup', mouseupListener);
+        function touchstartListener(e) {
+            recordPosition.x = e.touches[0].clientX;
+            recordPosition.y = e.touches[0].clientY;
+            window.addEventListener('touchmove', touchmoveListener);         
+        };
+        function touchmoveListener(e) {
+            touchController.setState({
+                plusX: (e.touches[0].clientX - recordPosition.x) / 100,
+                plusY: - (e.touches[0].clientY - recordPosition.y) / 100
+            })
+        }
+        function touchendListener(e) {
+            recordPosition.x = 0;
+            recordPosition.y = 0;
+            window.removeEventListener('touchmove', touchmoveListener);
+        }
+        window.addEventListener('touchstart', touchstartListener);
+        window.addEventListener('touchend', touchendListener); // iOS & Android
+        // window.addEventListener('devicemotion', devicemotion, false);
     } else if (MODE === 'direction') {
-        const leftAction = () => {
-            console.log('Left button clicked');
-            controllerState.direction -= 5;
-            emitUpdates();
-        };
-        const rightAction = () => {
-            console.log('Right button clicked');
-            controllerState.direction += 5;
-            emitUpdates();
-        };
-        document.getElementById('left').onclick = leftAction;
-        document.getElementById('right').onclick = rightAction;
     }
 }
+
