@@ -14,7 +14,7 @@ const express = require('express');
 const _ = require('lodash');
 
 const app = express();
-app.use('/', express.static('app'));
+app.use('/', express.static('dist'));
 app.use('/lib', express.static('lib'));
 app.use('/assets', express.static('assets'));
 
