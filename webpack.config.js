@@ -12,7 +12,17 @@ module.exports = {
         app: './src/index.js'
     },
     module: {
-        rules: [{
+        rules: [
+          {
+            test: /\.(js|jsx)$/,
+            exclude: /(node_modules|bower_components)/,
+            loader: 'babel-loader',
+            options: { 
+              presets: ['env', 'react'],
+              plugins: ['transform-class-properties']
+            }
+          },
+          {
             test: /\.less$/,
             use: [{
                 loader: 'style-loader' // creates style nodes from JS strings

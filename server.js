@@ -5,7 +5,9 @@
 
 const GAME_CONNECT = 'game_connect';
 const GAME_CONNECTED = 'game_connected';
+const CONTROLLER_CONNECT = 'controller_connect';
 const CONTROLLER_STATE_CHANGE = 'controller_state_change';
+const DISCONNECT = 'disconnect';
 
 const http = require('http');
 const express = require('express');
@@ -27,31 +29,35 @@ const gameSockets = {};
 const controllerSockets = {};
 io.sockets.on('connection', socket => {
     socket.on(GAME_CONNECT, gameInfo => {
-        console.log(`Game ${gameInfo.id} connected`);
+        if (gameInfo) {
+          console.log(`Game ${gameInfo.id} connected`);           
+        }
         gameSockets[socket.id] = {
             socket,
             multi: gameInfo.multi,
             numOfPlayers: gameInfo.numOfPlayers || 1
         };
+        console.log('Game connected');
         socket.emit(GAME_CONNECTED);
     });
-    socket.on('controller_connect', SocketId => {
+    socket.on(CONTROLLER_CONNECT, gameSocketId => {
         // First determine whether the game exist
-        if (gameSockets[SocketId]) {
-            const gameSocketItem = gameSockets[SocketId];
+        if (gameSockets[gameSocketId]) {
+            const gameSocketItem = gameSockets[gameSocketId];
             // Save the socket and game socket id
             controllerSockets[socket.id] = {
                 socket,
-                gameId: SocketId
+                gameSocketId
             };
 
+            // if controller succesfully connected
             function handleSuccess() {
                 gameSocketItem.socket.emit('controller_connected', true);
                 console.log('Controller connected successfully');
                 socket.on(CONTROLLER_STATE_CHANGE, state => {
                     console.log(state);
-                    if (gameSockets[SocketId]) {
-                        gameSockets[SocketId].socket.emit(CONTROLLER_STATE_CHANGE, state);
+                    if (gameSockets[gameSocketId]) {
+                        gameSockets[gameSocketId].socket.emit(CONTROLLER_STATE_CHANGE, state);
                     }
                 });
             }
@@ -69,31 +75,32 @@ io.sockets.on('connection', socket => {
             } 
             // Else creates a new array
             else {
-                gameSocketItem.controllers = new Array(gameSocketItem.numOfPlayers);
-                gameSocketItem.push(socket.id);
+                gameSocketItem.controllers = [socket.id];
                 handleSuccess();
             }
         } else {
+            // if no such game exists
             console.log('Controller tries to connect but failed');
+            console.log('The corresponding game does not exist');
             socket.emit('controller_connected', false);
         }
     });
-    socket.on('disconnect', () => {
+    socket.on(DISCONNECT, () => {
         if (gameSockets[socket.id]) {
             console.log('Game disconnected');
             const disconnectedGame = gameSockets[socket.id];
             if (controllerSockets[disconnectedGame.controllerId]) {
                 const disconnectedController = controllerSockets[disconnectedGame.controllerId];
                 disconnectedController.socket.emit('controller_connected', false);
-                disconnectedController.gameId = '';
+                disconnectedController.gameSocketId = '';
             }
             delete gameSockets[socket.id];
         }
         else if (controllerSockets[socket.id]) {
             console.log('Controller disconnected');
             const disconnectedController = controllerSockets[socket.id];
-            if (gameSockets[disconnectedController.gameId]) {
-                const disconnectedGame = gameSockets[disconnectedController.gameId];
+            if (gameSockets[disconnectedController.gameSocketId]) {
+                const disconnectedGame = gameSockets[disconnectedController.gameSocketId];
                 disconnectedGame.socket.emit('controller_connected', false);
                 disconnectedGame.socket.emit('controller_disconnected');
                 disconnectedGame.controllerId = '';
