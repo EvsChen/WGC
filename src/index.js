@@ -47,15 +47,11 @@ class Controller {
     }
 }
 
+// Determine whether the connected client is a controller or a game
 if (window.location.href.indexOf('?id=') > 0) {
     initController();
 } else {
     initGame();
-}
-
-function initController() {
-    document.getElementById('main').classList.add('hide');
-    initControllerSocket(window.location.href.split('?id=')[1]);
 }
 
 function initGame() {
@@ -76,23 +72,44 @@ function initGame() {
     });
 }
 
+/**
+ * @function getGameInfo - get full info of the game
+ * @param {string} id 
+ * @returns {Object} gameInfo - gameInfo
+ * @returns {boolean} gameInfo.multi - whether the game is a multiplayer game
+ * @returns {number} gameInfo.numOfPlayer
+ */
+function getGameInfo(id) {
+    const resObj = {
+        id
+    };
+    switch (id) {
+        case 'TestMulti':
+            resObj.multi = true;
+            resObj.numOfPlayers = 2;
+            break;
+        default:
+            resObj.multi = false;
+    }
+    return resObj;
+}
+
 function initGameSocket(gameId) {
-    socket.emit(GAME_CONNECT);
+    const gameInfo = getGameInfo(gameId);
+    socket.emit(GAME_CONNECT, gameInfo);
     socket.on(GAME_CONNECTED, gameConnectedListener);
+    let numOfConnectedControllers = 0;
     socket.on(CONTROLLER_CONNECTED, controllerConnectedListener);
     function gameConnectedListener() {
         const url = `http://172.18.27.18:3000?id=${socket.id}`;
         // const url = `http://localhost:3000?id=${socket.id}`;
         // const url = `http://192.168.31.22:3000?id=${socket.id}`;
-        const urlLink = document.createElement('a');
-        urlLink.id = 'url';
-        urlLink.href = url;
-        urlLink.text = 'Click here to open the controller';
-        urlLink.target = '_blank';
-        document.body.appendChild(urlLink);
-        const qr = document.createElement('div');
-        qr.id = 'qr';
-        document.body.appendChild(qr);
+        const urlLink = $(`<a id="url" href="${url}" target="_blank">Click here to open the controller</a>`);
+        const qr = $('<div id="qr"></div>');
+        const connectedControllers = $(document.createElement('span')).id('connectedControllers');
+        const contDiv = $(document.createElement('div')).id('gameSocket');
+        contDiv.append(urlLink, qr, connectedControllers);
+        $('body').append(contDiv);
         const qrCode = new QRCode('qr');
         qrCode.makeCode(url);
         socket.removeListener(GAME_CONNECTED, gameConnectedListener);
@@ -100,18 +117,21 @@ function initGameSocket(gameId) {
     function controllerConnectedListener(isConnected) {
         if (isConnected) {
             console.log('Controller connected successfully');
-            $('#qr').remove();
-            $('#url').remove();
-            const game = showGame(gameId);
-            socket.on(CONTROLLER_STATE_CHANGE, state => {
-                game.setCube(state);
-            });
-            socket.on(CONTROLLER_DISCONNECTED, () => {
-            });
+            numOfConnectedControllers++;
+            $('#connectedControllers').text(`${numOfConnectedControllers} controllers connected`);
+            if (numOfConnectedControllers === gameInfo.numOfPlayers) {
+                $('#gameSocket').remove();
+                const game = showGame(gameId);
+                socket.removeListener(CONTROLLER_CONNECTED, controllerConnectedListener);
+                socket.on(CONTROLLER_STATE_CHANGE, state => {
+                    game.setCube(state);
+                });
+                socket.on(CONTROLLER_DISCONNECTED, () => {
+                });
+            }
         }
         else {
             console.log('Controller failed to connect');
-            document.getElementById('qr').style.display = 'block';
         }
     };
 }
@@ -119,6 +139,11 @@ function initGameSocket(gameId) {
 function showGame(gameId) {
     const cubeGame = new CubeGame('GameBlock');
     return cubeGame;
+}
+
+function initController() {
+    document.getElementById('main').classList.add('hide');
+    initControllerSocket(window.location.href.split('?id=')[1]);
 }
 
 function initControllerSocket(socketId) {
@@ -135,7 +160,7 @@ function initControllerSocket(socketId) {
             gameSocketId: socketId
         }, initState);
         const recordPosition = {
-            x: 0, 
+            x: 0,
             y: 0
         };
         function mousedownListener(e) {
@@ -148,7 +173,7 @@ function initControllerSocket(socketId) {
             recordPosition.y = 0;
             window.removeEventListener('mousemove', mousemoveListener);
         }
-        function mousemoveListener (e) {
+        function mousemoveListener(e) {
             const plusX = e.clientX - recordPosition.x;
             const plusY = e.clientY - recordPosition.y;
             touchController.setState({
@@ -161,7 +186,7 @@ function initControllerSocket(socketId) {
         function touchstartListener(e) {
             recordPosition.x = e.touches[0].clientX;
             recordPosition.y = e.touches[0].clientY;
-            window.addEventListener('touchmove', touchmoveListener);         
+            window.addEventListener('touchmove', touchmoveListener);
         };
         function touchmoveListener(e) {
             touchController.setState({
