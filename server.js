@@ -3,20 +3,27 @@
 * @author: EvsChen
 */
 
+const path = require('path');
+const http = require('http');
+const express = require('express');
+
 const GAME_CONNECT = 'game_connect';
 const GAME_CONNECTED = 'game_connected';
 const CONTROLLER_CONNECT = 'controller_connect';
+const CONTROLLER_CONNECTED = 'controller_connected';
+const CONTROLLER_ALL_CONNECTED = 'controller_all_connected';
 const CONTROLLER_STATE_CHANGE = 'controller_state_change';
 const DISCONNECT = 'disconnect';
 
-const http = require('http');
-const express = require('express');
-const _ = require('lodash');
-
 const app = express();
+
+app.get('/pingpong', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'pingpong.html'));
+});
 app.use('/', express.static('dist'));
-app.use('/lib', express.static('lib'));
-app.use('/assets', express.static('assets'));
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+});
 
 const server = new http.Server(app);
 const PORT = process.env.PORT || 3000;
@@ -27,85 +34,95 @@ console.log(`Server listening on port ${PORT}`);
 const io = require('socket.io').listen(server);
 const gameSockets = {};
 const controllerSockets = {};
-io.sockets.on('connection', socket => {
-    socket.on(GAME_CONNECT, gameInfo => {
-        if (gameInfo) {
-          console.log(`Game ${gameInfo.id} connected`);           
-        }
-        gameSockets[socket.id] = {
-            socket,
-            multi: gameInfo.multi,
-            numOfPlayers: gameInfo.numOfPlayers || 1
-        };
-        console.log('Game connected');
-        socket.emit(GAME_CONNECTED);
-    });
-    socket.on(CONTROLLER_CONNECT, gameSocketId => {
-        // First determine whether the game exist
-        if (gameSockets[gameSocketId]) {
-            const gameSocketItem = gameSockets[gameSocketId];
-            // Save the socket and game socket id
-            controllerSockets[socket.id] = {
-                socket,
-                gameSocketId
-            };
+io.sockets.on('connection', (socket) => {
+  socket.on(GAME_CONNECT, onGameConnect);
+  socket.on(CONTROLLER_CONNECT, onControllerConnect);
+  socket.on(DISCONNECT, onDisconnect);
 
-            // if controller succesfully connected
-            function handleSuccess() {
-                gameSocketItem.socket.emit('controller_connected', true);
-                console.log('Controller connected successfully');
-                socket.on(CONTROLLER_STATE_CHANGE, state => {
-                    console.log(state);
-                    if (gameSockets[gameSocketId]) {
-                        gameSockets[gameSocketId].socket.emit(CONTROLLER_STATE_CHANGE, state);
-                    }
-                });
-            }
+  /**
+   * @param {object} gameInfo - info of the game
+   */
+  function onGameConnect(gameInfo) {
+    console.log('Game trying to connect');
+    if (!gameInfo) {
+      console.error('Missing game info');
+      return;
+    }
+    console.log(`Game ${gameInfo.gameId}: ${socket.id} connected`);
+    gameSockets[socket.id] = {
+      socket,
+      gameId: gameInfo.gameId,
+      numOfPlayer: gameInfo.numOfPlayer || 1,
+      controllers: [],
+    };
+    socket.emit(GAME_CONNECTED);
+  };
 
-            // If the controller array already exists
-            if (_.isArray(gameSocketItem.controllers)) {
-                const controllerArr = gameSocketItem.controllers;
-                if (controllerArr.length < gameSocketItem.numOfPlayers) {
-                    controllerArr.push(socket.id);
-                    handleSuccess();
-                } else {
-                    console.log('Controller tries to connect but failed: more controllers than expected');
-                    socket.emit('controller_connected', false);                    
-                }
-            } 
-            // Else creates a new array
-            else {
-                gameSocketItem.controllers = [socket.id];
-                handleSuccess();
-            }
-        } else {
-            // if no such game exists
-            console.log('Controller tries to connect but failed');
-            console.log('The corresponding game does not exist');
-            socket.emit('controller_connected', false);
-        }
-    });
-    socket.on(DISCONNECT, () => {
-        if (gameSockets[socket.id]) {
-            console.log('Game disconnected');
-            const disconnectedGame = gameSockets[socket.id];
-            if (controllerSockets[disconnectedGame.controllerId]) {
-                const disconnectedController = controllerSockets[disconnectedGame.controllerId];
-                disconnectedController.socket.emit('controller_connected', false);
-                disconnectedController.gameSocketId = '';
-            }
-            delete gameSockets[socket.id];
-        }
-        else if (controllerSockets[socket.id]) {
-            console.log('Controller disconnected');
-            const disconnectedController = controllerSockets[socket.id];
-            if (gameSockets[disconnectedController.gameSocketId]) {
-                const disconnectedGame = gameSockets[disconnectedController.gameSocketId];
-                disconnectedGame.socket.emit('controller_connected', false);
-                disconnectedGame.socket.emit('controller_disconnected');
-                disconnectedGame.controllerId = '';
-            }
-            delete controllerSockets[socket.id];
-        }
-    });
+  /**
+   * listener for controller connect
+   * @param {string} gameSocketId
+   */
+  function onControllerConnect(gameSocketId) {
+    console.log('Controller trying to connect...');
+    // if no such game exists
+    if (!gameSockets[gameSocketId]) {
+      console.log(`The corresponding game ${gameSocketId} does not exist`);
+      socket.emit(CONTROLLER_CONNECTED, false);
+      return;
+    }
+    controllerSockets[socket.id] = {socket, gameSocketId};
+
+    const {
+      controllers,
+      socket: gameSocket,
+      numOfPlayer,
+    } = gameSockets[gameSocketId];
+
+    if (controllers.length < numOfPlayer) {
+      controllers.push(socket.id);
+      gameSocket.emit(CONTROLLER_CONNECTED, true);
+      console.log('Controller connected successfully');
+      socket.on(CONTROLLER_STATE_CHANGE, (state) => {
+        console.log('Received state change', state);
+        gameSocket.emit(CONTROLLER_STATE_CHANGE, state);
+      });
+    } else if (controllers.length === numOfPlayer) {
+      // all controllers connected
+      gameSocket.emit(CONTROLLER_ALL_CONNECTED);
+    } else {
+      // more controllers than needed
+      console.log('Controller tries to connect but failed: more controllers than expected');
+      socket.emit(CONTROLLER_CONNECTED, false);
+    }
+  };
+
+  /**
+   * on disconnect
+   */
+  function onDisconnect() {
+    if (gameSockets[socket.id]) {
+      console.log('Game disconnected');
+      const disconnectedGame = gameSockets[socket.id];
+      if (controllerSockets[disconnectedGame.controllerId]) {
+        const disconnectedController = controllerSockets[disconnectedGame.controllerId];
+        disconnectedController.socket.emit(CONTROLLER_CONNECTED, false);
+        disconnectedController.gameSocketId = '';
+      }
+      delete gameSockets[socket.id];
+    } else if (controllerSockets[socket.id]) {
+      console.log('Controller disconnected');
+      const disconnectedController = controllerSockets[socket.id];
+      if (gameSockets[disconnectedController.gameSocketId]) {
+        const {
+          controllers,
+          socket: gameSocket,
+        } = gameSockets[disconnectedController.gameSocketId];
+        // remove the controller from the arr
+        controllers.splice(controllers.indexOf(socket.id), 1);
+        gameSocket.emit(CONTROLLER_CONNECTED, false);
+        gameSocket.emit('controller_disconnected');
+      }
+      delete controllerSockets[socket.id];
+    }
+  };
 });

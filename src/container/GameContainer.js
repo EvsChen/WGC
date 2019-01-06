@@ -1,117 +1,72 @@
 import React from 'react';
-import $ from 'jquery';
-import PropTypes from 'proptypes';
+import {
+  HashRouter as Router,
+  Route,
+} from 'react-router-dom';
 
-import Game from '../components/Game';
-import CubeGame from '../CubeGame';
-import events from '../common/events';
+import GameChooser from './GameChooser';
+import ConnectContainer from './ConnectContainer';
+import PingpongContainer from './PingpongContainer';
 
-const host = '192.168.199.199';
+import {GameContext} from '../context/gameContext';
 
-/**
-* @function getGameInfo - get full info of the game
-* @param {string} id 
-* @returns {Object} gameInfo - gameInfo
-* @returns {boolean} gameInfo.multi - whether the game is a multiplayer game
-* @returns {number} gameInfo.numOfPlayer
-*/
-function getGameInfo(id) {
-  const resObj = {
-      id
-  };
-  switch (id) {
-      case 'TestMulti':
-          resObj.multi = true;
-          resObj.numOfPlayers = 2;
-          break;
-      default:
-          resObj.multi = false;
-  }
-  return resObj;
-}
-
+import {connect} from '../styles/connect.css';
 
 class GameContainer extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      socket: {}
+      collapsed: true,
+      gameInfo: {},
+      socket: window.io(),
     };
   }
 
-  componentDidMount() {
-    this.initGame(this.props.socket);
-  }
-  
-  initGame = socket => {
-    const gameList = document.getElementsByClassName('game-list')[0];
-    gameList.addEventListener('click', e => {
-        let target = e.target;
-        let curTarget = e.currentTarget;
-        while (target !== curTarget) {
-            console.log(target);
-            if (target.nodeName.toLowerCase() === 'li') {
-                gameList.style.display = 'none';
-                (socket, target.id);
-                break;
-            }
-            target = target.parentNodinitGameSockete;
-        }
-    })
-  }
+  setGame = (gameInfo) => {
+    this.setState({gameInfo});
+    this.setState({
+      collapsed: false,
+    });
+  };
 
-  initGameSocket = (socket, gameId) => {
-    const gameInfo = getGameInfo(gameId);
-    socket.emit(events.GAME_CONNECT, gameInfo);
-    socket.on(events.GAME_CONNECTED, onGameConnected);
-    let numOfConnectedControllers = 0;
-    socket.on(events.CONTROLLER_CONNECTED, controllerConnectedListener);
-    function onGameConnected() {
-        const url = `http://${host}:3000?id=${socket.id}`;
-        const urlLink = $(`<a id="url" href="${url}" target="_blank">Click here to open the controller</a>`);
-        const qr = $('<div id="qr"></div>');
-        const connectedControllers = $(document.createElement('span')).attr('id', 'connectedControllers');
-        const contDiv = $(document.createElement('div')).attr('id', 'gameSocket');
-        contDiv.append(urlLink, qr, connectedControllers);
-        $('body').append(contDiv);
-        const qrCode = new QRCode('qr');
-        qrCode.makeCode(url);
-        socket.removeListener(events.GAME_CONNECTED, onGameConnected);
-    };
-    function controllerConnectedListener(isConnected) {
-        if (isConnected) {
-            console.log('Controller connected successfully');
-            numOfConnectedControllers++;
-            $('#connectedControllers').text(`${numOfConnectedControllers} controllers connected`);
-            if (numOfConnectedControllers === gameInfo.numOfPlayers) {
-                $('#gameSocket').remove();
-                const game = showGame(gameId);
-                socket.removeListener(events.CONTROLLER_CONNECTED, controllerConnectedListener);
-                socket.on(events.CONTROLLER_STATE_CHANGE, state => {
-                    game.setCube(state);
-                });
-                socket.on(events.CONTROLLER_DISCONNECTED, () => {
-                });
-            }
-        }
-        else {
-            console.log('Controller failed to connect');
-        }
-    };
-  }
-
-  showGame = gameId => {
-    const cubeGame = new CubeGame('GameBlock');
-    return cubeGame;
+  toggleCollapse = () => {
+    this.setState((prevState) => {
+      return {
+        collapsed: !prevState.collapsed,
+      };
+    });
   }
 
   render() {
-    return (<Game />);
-  }
+    const {collapsed} = this.state;
+    const context = {
+      gameInfo: this.state.gameInfo,
+      socket: this.state.socket,
+    };
+    return (
+      <React.Fragment>
+        <GameContext.Provider value={context}>
+          <Router>
+            <div>
+              <Route exact path="/" render={(props) => {
+                return <GameChooser {...props} setGame={this.setGame} />;
+              }} />
+              <Route path="/pp" component={PingpongContainer} />
+            </div>
+          </Router>
+          <div className={connect} onClick={this.toggleCollapse}>
+            <GameContext.Consumer>
+              {
+                (cxt) => (
+                  <ConnectContainer {...cxt} collapsed={collapsed}/>
+                )
+              }
+            </GameContext.Consumer>
+          </div>
+        </GameContext.Provider>
+      </React.Fragment>
+    );
+  }  
 }
-
-GameContainer.propTypes = {
-  socket: PropTypes.object
-};
 
 export default GameContainer;
