@@ -3,7 +3,38 @@ import {Link} from 'react-router-dom';
 import PropTypes from 'proptypes';
 import _ from 'lodash';
 
-import {gameList} from '../common/constants';
+const gameList = [
+  {
+    name: 'Asteroids',
+    id: 'Asteroids',
+    numOfPlayer: 1,
+    link: '',
+  },
+  {
+    name: 'Chrome dinosaur',
+    id: 'Chrome dinosaur',
+    numOfPlayer: 1,
+    link: '/dino',
+  },
+  {
+    name: 'Test',
+    id: 'TestSingle',
+    numOfPlayer: 1,
+    link: '',
+  },
+  {
+    name: 'Test',
+    id: 'TestMulti',
+    numOfPlayer: 2,
+    link: '',
+  },
+  {
+    name: 'Ping pong',
+    id: 'pingpong',
+    numOfPlayer: 1,
+    link: '/pp',
+  },
+];
 
 class GameChooser extends React.Component {
   constructor(props) {

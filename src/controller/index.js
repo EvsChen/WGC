@@ -3,7 +3,6 @@ import React from 'react';
 import events from '../common/events';
 import ControllerState from '../class/ControllerState';
 import {button} from '../styles/controller.css';
-import {throttle} from '../common/util';
 
 class ControllerContainer extends React.Component {
   constructor(props) {

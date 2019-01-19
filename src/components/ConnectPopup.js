@@ -2,14 +2,14 @@ import React from 'react';
 import PropTypes from 'proptypes';
 
 import events from '../common/events';
-import QrCode from '../components/QrCode';
+import QrCode from './QrCode';
 
 import {GameContext} from '../context/gameContext';
 
 // const HOST = 'http://localhost:3000';
 const HOST = 'http://192.168.0.104:3000';
 
-class ConnectContainer extends React.Component {
+export default class ConnectPopup extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -29,7 +29,7 @@ class ConnectContainer extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    const gameId = this.props.gameInfo.id;
+    const gameId = this.props.gameInfo && this.props.gameInfo.id;
     if (gameId && prevProps.gameInfo && gameId !== prevProps.gameInfo.id) {
       this.initGameSocket();
     }
@@ -76,7 +76,8 @@ class ConnectContainer extends React.Component {
 
   render() {
     const {url, numOfConnectedControllers} = this.state;
-    const {collapsed, gameInfo: {numOfPlayer}} = this.props;
+    const {collapsed, gameInfo} = this.props;
+    const numOfPlayer = gameInfo ? gameInfo.numOfPlayer : 0;
     const isAllConnected = (numOfPlayer > 0) && (numOfConnectedControllers === numOfPlayer);
     const outStyle = {
       // margin: collapsed ? '10px' : '20px',
@@ -106,5 +107,3 @@ class ConnectContainer extends React.Component {
     );
   }
 }
-
-export default ConnectContainer;

@@ -6,7 +6,6 @@ const CleanWebpackPlugin = require('clean-webpack-plugin');
 module.exports = {
   watchOptions: {
     ignored: /node_moduels/,
-    poll: 10000,
   },
   mode: 'development',
   entry: {
@@ -42,7 +41,7 @@ module.exports = {
       },
     ],
   },
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
   plugins: [
     new CleanWebpackPlugin('dist'),
     new HtmlWebpackPlugin({

@@ -5,12 +5,13 @@ import {
 } from 'react-router-dom';
 
 import GameChooser from './GameChooser';
-import ConnectContainer from './ConnectContainer';
-import PingpongContainer from './PingpongContainer';
+import ConnectPopup from './components/ConnectPopup';
+import PingpongContainer from './pingpong';
+import Trex from './trex';
 
-import {GameContext} from '../context/gameContext';
+import {GameContext} from './context/gameContext';
 
-import {connect} from '../styles/connect.css';
+import {connect} from './styles/connect.css';
 
 class GameContainer extends React.Component {
   constructor(props) {
@@ -52,13 +53,14 @@ class GameContainer extends React.Component {
                 return <GameChooser {...props} setGame={this.setGame} />;
               }} />
               <Route path="/pp" component={PingpongContainer} />
+              <Route path="/dino" component={Trex} />
             </div>
           </Router>
           <div className={connect} onClick={this.toggleCollapse}>
             <GameContext.Consumer>
               {
                 (cxt) => (
-                  <ConnectContainer {...cxt} collapsed={collapsed}/>
+                  <ConnectPopup {...cxt} collapsed={collapsed}/>
                 )
               }
             </GameContext.Consumer>
