@@ -1,10 +1,10 @@
 import React from 'react';
 
 import events from '../common/events';
-import ControllerState from '../class/ControllerState';
-import {button} from '../styles/controller.css';
+import ControllerState from './ControllerState';
+import {button} from './index.css';
 
-class ControllerContainer extends React.Component {
+export default class Controller extends React.Component {
   constructor(props) {
     super(props);
     const io = window.io;
@@ -72,6 +72,7 @@ class ControllerContainer extends React.Component {
     const {started} = this.state;
     return (
       <div>
+        You have succesfully connected.
         <button className={button} onClick={this.toggleStart}>
           {started ? 'Stop' : 'Start'}
         </button>
@@ -86,4 +87,3 @@ class ControllerContainer extends React.Component {
   }
 }
 
-export default ControllerContainer;

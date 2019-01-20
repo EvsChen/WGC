@@ -4,8 +4,8 @@ import {
   Route,
 } from 'react-router-dom';
 
-import Controller from './controller';
-import GameContainer from './GameContainer';
+import Controller from './controller/index';
+import Game from './game/index';
 
 /* eslint-disable */
 const App = () => {
@@ -14,7 +14,7 @@ const App = () => {
       <Router>
         <div>
           <Route path="/controller/:socketId" component={Controller} />
-          <Route exact path="/" component={GameContainer} />
+          <Route exact path="/" component={Game} />
         </div>
       </Router>
     </React.Fragment>
