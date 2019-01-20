@@ -5,6 +5,7 @@ import {
 } from 'react-router-dom';
 
 import Controller from './controller/index';
+import ControllerList from './controller/List';
 import Game from './game/index';
 
 /* eslint-disable */
@@ -13,6 +14,7 @@ const App = () => {
     <React.Fragment>
       <Router>
         <div>
+          <Route exact path="/controller" component={ControllerList} />
           <Route path="/controller/:socketId" component={Controller} />
           <Route exact path="/" component={Game} />
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import _ from 'lodash';
 
 import events from '../common/events';
 import ControllerState from './ControllerState';
@@ -24,9 +25,23 @@ export default class Controller extends React.Component {
     });
   }
 
+  // TODO: handle the data logic in util function
   registerSocketEvent() {
-    // window.addEventListener('devicemotion', this.onDeviceMotion, true);
+    window.addEventListener('devicemotion', _.debounce(this.onDeviceMotion, 200), true);
     window.addEventListener('touchstart', this.onTouchStart);
+  }
+
+  emitUpdate() {
+    const snapshot = {};
+    Object.assign(snapshot, this.controllerState);
+    this.state.socket.emit(events.CONTROLLER_STATE_CHANGE, snapshot);
+  }
+
+  onDeviceMotion = (e) => {
+    console.log(e);
+    if (!this.state.started) return;
+    this.controllerState.handleEvent(e);
+    this.emitUpdate();
   }
 
   onTouchStart = (e) => {

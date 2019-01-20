@@ -47,24 +47,30 @@ export default class Game extends React.Component {
     return (
       <React.Fragment>
         <GameContext.Provider value={context}>
-          <Router>
-            <div>
-              <Route exact path="/" render={(props) => {
-                return <GameChooser {...props} setGame={this.setGame} />;
-              }} />
-              <Route path="/pp" component={PingpongContainer} />
-              <Route path="/dino" component={Trex} />
-            </div>
-          </Router>
-          <div className={connect} onClick={this.toggleCollapse}>
-            <GameContext.Consumer>
-              {
-                (cxt) => (
-                  <ConnectPopup {...cxt} collapsed={collapsed}/>
-                )
-              }
-            </GameContext.Consumer>
-          </div>
+          <GameContext.Consumer>
+            {
+              (cxt) => (
+                <React.Fragment>
+                  <Router>
+                    <div>
+                      <Route exact path="/" render={(props) => {
+                        return <GameChooser {...props} setGame={this.setGame} />;
+                      }} />
+                      <Route path="/pp" render={(props) => {
+                        return <PingpongContainer {...props} {...cxt} />;
+                      }}/>
+                      <Route path="/dino" render={(props) => {
+                        return <Trex {...props} {...cxt} />;
+                      }}/>
+                    </div>
+                  </Router>
+                  <div className={connect} onClick={this.toggleCollapse}>
+                    <ConnectPopup {...cxt} collapsed={collapsed}/>   
+                  </div>
+                </React.Fragment>
+              )
+            }
+          </GameContext.Consumer>
         </GameContext.Provider>
       </React.Fragment>
     );

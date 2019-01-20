@@ -16,15 +16,6 @@ const CONTROLLER_STATE_CHANGE = 'controller_state_change';
 const DISCONNECT = 'disconnect';
 
 const app = express();
-
-app.get('/pingpong', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'dist', 'pingpong.html'));
-});
-app.use('/', express.static('dist'));
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-});
-
 const server = new http.Server(app);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT);
@@ -34,6 +25,20 @@ console.log(`Server listening on port ${PORT}`);
 const io = require('socket.io').listen(server);
 const gameSockets = {};
 const controllerSockets = {};
+
+app.get('/pingpong', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'pingpong.html'));
+});
+app.get('/api/controller', (req, res) => {
+  res.send({
+    socketList: Object.keys(gameSockets),
+  });
+});
+app.use('/', express.static('dist'));
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+});
+
 io.sockets.on('connection', (socket) => {
   socket.on(GAME_CONNECT, onGameConnect);
   socket.on(CONTROLLER_CONNECT, onControllerConnect);

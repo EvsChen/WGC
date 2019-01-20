@@ -1,6 +1,7 @@
 import React from 'react';
 import './trex';
 import './style.css';
+import events from '../../common/events';
 import png1 from './assets/default_100_percent/100-offline-sprite.png';
 import png2 from './assets/default_200_percent/200-offline-sprite.png';
 
@@ -8,6 +9,11 @@ export default class Dinosaur extends React.Component {
   componentDidMount() {
     new Runner('.interstitial-wrapper');
     document.addEventListener('keydown', this.onKeydown);
+    this.props.socket.on(events.CONTROLLER_STATE_CHANGE, this.handleControllerState);
+  }
+
+  handleControllerState = (state) => {
+    console.log(state);
   }
 
   onKeydown(evt) {

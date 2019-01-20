@@ -8,6 +8,7 @@ class ControllerState {
    * @param {number} config.innerWidth
    */
   constructor(config) {
+    this.type = '';
     this.x = 0;
     this.y = 0;
     this.z = 0;
@@ -27,6 +28,25 @@ class ControllerState {
     this._freq /= 1000;
     this._lastUpdate = 0;
     this._acceThreshold = 0.1;
+  }
+
+  handleEvent(e) {
+    if (!e) return;
+    this.type = e.type;
+    switch (e.type) {
+      case 'devicemotion':
+        this.handleDeviceMotion(e);
+        break;
+      default:
+        console.log(e);
+    };
+  }
+
+  handleDeviceMotion(e) {
+    const {x, y, z} = e.acceleration;
+    this.xAcce = x;
+    this.yAcce = y;
+    this.zAce = z;    
   }
 
   /**
