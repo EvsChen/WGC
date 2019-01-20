@@ -6,17 +6,34 @@ import png1 from './assets/default_100_percent/100-offline-sprite.png';
 import png2 from './assets/default_200_percent/200-offline-sprite.png';
 
 export default class Dinosaur extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
+
   componentDidMount() {
-    new Runner('.interstitial-wrapper');
+    this.runner = new Runner('.interstitial-wrapper');
     document.addEventListener('keydown', this.onKeydown);
     this.props.socket.on(events.CONTROLLER_STATE_CHANGE, this.handleControllerState);
   }
 
   handleControllerState = (state) => {
     const {zAcce} = state;
-    if (zAcce > 5) {
-      console.log('jump! ' + zAcce);
+    if (this.runner.tRex.jumping) {
+      if (zAcce < 0) {
+        console.log('down');
+        this.runner.onKeyUp(this.createMockKeyEvent('keyup', 32));
+      }
+    } else {
+      if (zAcce > 3) {
+        console.log('jump! ' + zAcce);
+        this.runner.onKeyDown(this.createMockKeyEvent('keydown', 32));
+      }
     }
+  }
+
+  createMockKeyEvent(type, keycode) {
+    return new KeyboardEvent(type, {keyCode: keycode});
   }
 
   onKeydown(evt) {
