@@ -27,7 +27,8 @@ class ControllerState {
     this._freq = config.updateFrequency || 50;
     this._freq /= 1000;
     this._lastUpdate = 0;
-    this._acceThreshold = 0.1;
+    this._acceThreshold = 0.5;
+    this.listeners = {};
   }
 
   handleEvent(e) {
@@ -44,9 +45,26 @@ class ControllerState {
 
   handleDeviceMotion(e) {
     const {x, y, z} = e.acceleration;
-    this.xAcce = x;
-    this.yAcce = y;
-    this.zAce = z;    
+    const threshold = this._acceThreshold;
+    if (Math.abs(x) > threshold
+        || Math.abs(y) > threshold
+        || Math.abs(z) > threshold
+    ) {
+      this.xAcce = x;
+      this.yAcce = y;
+      this.zAcce = z;
+      this.dispatch('update');
+    }
+  }
+
+  on(evt, func) {
+    this.listeners[evt] = func;
+  }
+
+  dispatch(evt, ...args) {
+    if (this.listeners[evt]) {
+      this.listeners[evt](...args);
+    }
   }
 
   /**

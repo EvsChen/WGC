@@ -2,8 +2,6 @@ import React from 'react';
 import axios from 'axios';
 import {Link} from 'react-router-dom';
 
-const HOST = 'http://192.168.1.7:3000';
-
 export default class ControllerList extends React.Component {
   constructor(props) {
     super(props);

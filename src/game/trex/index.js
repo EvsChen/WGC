@@ -13,7 +13,10 @@ export default class Dinosaur extends React.Component {
   }
 
   handleControllerState = (state) => {
-    console.log(state);
+    const {zAcce} = state;
+    if (zAcce > 5) {
+      console.log('jump! ' + zAcce);
+    }
   }
 
   onKeydown(evt) {

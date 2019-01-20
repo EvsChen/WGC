@@ -23,25 +23,24 @@ export default class Controller extends React.Component {
       innerHeight: window.innerHeight,
       innerWidth: window.innerWidth,
     });
+    this.controllerState.on('update', this.emitUpdate);
   }
 
   // TODO: handle the data logic in util function
   registerSocketEvent() {
-    window.addEventListener('devicemotion', _.debounce(this.onDeviceMotion, 200), true);
+    window.addEventListener('devicemotion', this.onDeviceMotion);
     window.addEventListener('touchstart', this.onTouchStart);
   }
 
-  emitUpdate() {
+  emitUpdate = () => {
     const snapshot = {};
     Object.assign(snapshot, this.controllerState);
     this.state.socket.emit(events.CONTROLLER_STATE_CHANGE, snapshot);
   }
 
   onDeviceMotion = (e) => {
-    console.log(e);
     if (!this.state.started) return;
     this.controllerState.handleEvent(e);
-    this.emitUpdate();
   }
 
   onTouchStart = (e) => {
