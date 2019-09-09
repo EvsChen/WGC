@@ -63,8 +63,8 @@ class GameChooser extends React.Component {
             simply by scanning the QR code to join the game.
           </p>
         </section>
-        <div className="game" id="GameBlock">
-          <p>You can choose a game from below</p>
+        <div className="game nes-container with-title" id="GameBlock">
+          <p className="title">Choose a game from below</p>
           <ul className="game-list">
             {
               _.map(gameList, (game, index) => (
