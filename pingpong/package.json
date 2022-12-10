@@ -31,7 +31,7 @@
     "es6-promise": "^3.2.1",
     "event-emitter": "^0.3.4",
     "eventemitter3": "^2.0.2",
-    "express": "^4.13.4",
+    "express": "^4.17.3",
     "express-history-api-fallback": "^2.0.0",
     "fps": "0.0.3",
     "gsap": "^1.19.0",
